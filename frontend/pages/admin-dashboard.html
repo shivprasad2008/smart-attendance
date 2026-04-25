@@ -250,7 +250,7 @@
 </div>
 
 <script>
-  const API = 'http://localhost:5000/api';
+  const API = 'https://smart-attendance-0zyv.onrender.com/api';
   const token = () => localStorage.getItem('sa_token');
 
   // Auth guard
@@ -291,7 +291,7 @@
 
   async function loadStats() {
     try {
-      const health = await fetch('http://localhost:5000/health').then(r => r.json());
+      const health = await fetch('https://smart-attendance-0zyv.onrender.com/health').then(r => r.json());
       document.getElementById('statSessions').textContent = health.sessions || 0;
     } catch (_) { document.getElementById('statSessions').textContent = '–'; }
   }
