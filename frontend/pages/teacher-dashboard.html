@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Teacher Dashboard — SmartAttend</title>
+  <link rel="stylesheet" href="../css/tokens.css" />
+  <link rel="stylesheet" href="../css/global.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ── SESSION CARD ── */
+    .session-card {
+      background: var(--card);
+      border-radius: var(--r-2xl);
+      border: 2px solid var(--ink-10);
+      overflow: hidden;
+      position: relative;
+      box-shadow: var(--shadow-md);
+    }
+
+    .session-card.active {
+      border-color: var(--blue);
+      box-shadow: var(--shadow-blue);
+    }
+
+    .session-header {
+      background: var(--grad-hero);
+      color: #fff;
+      padding: var(--sp-6) var(--sp-8);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .session-title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 800;
+    }
+
+    .session-body {
+      padding: var(--sp-8);
+    }
+
+    /* QR Display */
+    .qr-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--sp-5);
+      padding: var(--sp-8) 0;
+    }
+
+    .qr-canvas-wrap {
+      position: relative;
+      padding: var(--sp-4);
+      background: #fff;
+      border-radius: var(--r-xl);
+      box-shadow: 0 4px 40px rgba(59,91,246,0.15), 0 0 0 1px var(--ink-10);
+    }
+
+    .qr-aura {
+      position: absolute;
+      inset: -16px;
+      border-radius: calc(var(--r-xl) + 16px);
+      background: radial-gradient(circle, rgba(59,91,246,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    #qrcode canvas, #qrcode img {
+      display: block;
+      border-radius: var(--r-sm);
+    }
+
+    /* Countdown Timer */
+    .timer-ring-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+
+    .timer-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .timer-mins {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 500;
+      color: var(--blue);
+      line-height: 1;
+    }
+
+    .timer-label {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--ink-60);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Student Count */
+    .present-count {
+      background: var(--blue-light);
+      border-radius: var(--r-2xl);
+      padding: var(--sp-6) var(--sp-8);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-6);
+    }
+
+    .count-big {
+      font-family: var(--font-display);
+      font-size: 4rem;
+      font-weight: 800;
+      color: var(--blue);
+      line-height: 1;
+    }
+
+    /* Session Controls */
+    .session-controls {
+      display: flex;
+      gap: var(--sp-4);
+      flex-wrap: wrap;
+    }
+
+    /* Idle State */
+    .idle-state {
+      text-align: center;
+      padding: var(--sp-12) var(--sp-8);
+    }
+
+    .idle-icon {
+      width: 80px; height: 80px;
+      background: var(--surface-2);
+      border-radius: var(--r-2xl);
+      display: grid;
+      place-items: center;
+      font-size: 2.5rem;
+      margin: 0 auto var(--sp-6);
+    }
+
+    /* History Table */
+    .history-session {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+      padding: var(--sp-4) var(--sp-5);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: background var(--t-fast);
+      border-bottom: 1px solid var(--ink-10);
+    }
+    .history-session:last-child { border-bottom: none; }
+    .history-session:hover { background: var(--surface); }
+
+    .session-icon {
+      width: 42px; height: 42px;
+      border-radius: var(--r-md);
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    /* Donut Summary */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-6);
+    }
+
+    /* Top Bar Select */
+    .subject-select {
+      padding: var(--sp-3) var(--sp-4);
+      background: var(--card);
+      border: 1.5px solid var(--ink-10);
+      border-radius: var(--r-md);
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--ink);
+      outline: none;
+      cursor: pointer;
+      transition: border-color var(--t-fast);
+      appearance: none;
+      padding-right: var(--sp-8);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%230A0E1A' opacity='.4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+    .subject-select:focus { border-color: var(--blue); }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <a href="teacher-dashboard.html" class="sidebar-logo">
+      <div class="logo-icon">⚡</div>
+      SmartAttend
+    </a>
+
+    <p class="sidebar-section-label">Teacher</p>
+    <nav class="sidebar-nav">
+      <a href="teacher-dashboard.html" class="nav-link active">
+        <span class="nav-icon">🏠</span> Dashboard
+      </a>
+      <a href="#" class="nav-link" onclick="document.getElementById('idleCard').scrollIntoView({behavior:'smooth'}); return false;">
+        <span class="nav-icon">⚡</span> Start Session
+      </a>
+      <a href="#" class="nav-link" onclick="document.querySelector('.history-session')?.scrollIntoView({behavior:'smooth'}); return false;">
+        <span class="nav-icon">📅</span> History
+      </a>
+    </nav>
+
+    <p class="sidebar-section-label">Account</p>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-link" onclick="doLogout(); return false;">
+        <span class="nav-icon">🚪</span> Logout
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="avatar" style="background: var(--grad-teal);" id="sidebarAvatar">T</div>
+        <div class="user-info">
+          <div class="name" id="sidebarName">Teacher</div>
+          <div class="role">Teacher</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="main-content">
+
+    <!-- Top Bar -->
+    <div class="topbar anim-fade-up">
+      <div class="topbar-left">
+        <div class="greeting" id="greetingText">Teacher Dashboard</div>
+        <div class="sub">Manage sessions and track student attendance in real-time</div>
+      </div>
+      <div class="topbar-right">
+        <select class="subject-select" id="subjectPicker" onchange="updateSubject()">
+          <option value="dsa">📘 Data Structures</option>
+          <option value="os">💻 Operating Systems</option>
+          <option value="cn">🌐 Computer Networks</option>
+          <option value="dbms">🗄️ Database Systems</option>
+        </select>
+        <div class="date-chip">📅 <span id="today-date"></span></div>
+        <div class="notif-btn">🔔 <span class="notif-dot"></span></div>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="grid-4 anim-fade-up delay-1" style="margin-bottom: var(--sp-6);">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--blue-light);">📚</div>
+        <div class="stat-body">
+          <div class="label">Total Sessions</div>
+          <div class="value">34</div>
+          <div class="change">This Semester</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--teal-light);">👥</div>
+        <div class="stat-body">
+          <div class="label">Avg Attendance</div>
+          <div class="value">81%</div>
+          <div class="change" style="color: var(--teal);">↑ +3% vs last month</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--rose-light);">⚠️</div>
+        <div class="stat-body">
+          <div class="label">At-Risk Students</div>
+          <div class="value">7</div>
+          <div class="change" style="color: var(--rose);">Below 75%</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--violet-light);">🎓</div>
+        <div class="stat-body">
+          <div class="label">Class Strength</div>
+          <div class="value">58</div>
+          <div class="change" style="color: var(--violet);">Students</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid: Session + Analytics -->
+    <div class="grid-hero anim-fade-up delay-2" style="margin-bottom: var(--sp-6);">
+
+      <!-- Session Control Card -->
+      <div>
+        <!-- IDLE STATE (shown by default) -->
+        <div class="session-card" id="idleCard">
+          <div class="idle-state">
+            <div class="idle-icon">📡</div>
+            <div style="font-family:var(--font-display); font-size:var(--text-xl); font-weight:800; margin-bottom:var(--sp-2);">No Active Session</div>
+            <div style="color:var(--ink-60); font-size:var(--text-sm); margin-bottom:var(--sp-6); max-width:280px; margin-left:auto; margin-right:auto;">
+              Start a session to generate a QR code and let students mark attendance.
+            </div>
+            <div style="display:flex; flex-direction:column; gap:var(--sp-3);">
+              <div class="input-group" style="text-align:left;">
+                <label class="input-label">Subject</label>
+                <select class="input" id="sessionSubject">
+                  <option>Data Structures & Algorithms</option>
+                  <option>Operating Systems</option>
+                  <option>Computer Networks</option>
+                  <option>Database Systems</option>
+                </select>
+              </div>
+              <div class="input-group" style="text-align:left;">
+                <label class="input-label">QR Expiry (minutes)</label>
+                <input class="input" type="number" value="15" min="5" max="60" id="expiryMins"/>
+              </div>
+              <button class="btn btn-primary btn-lg" onclick="startSession()" style="justify-content:center; margin-top: var(--sp-2);">
+                ⚡ Start Session
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVE STATE (hidden by default) -->
+        <div class="session-card active" id="activeCard" style="display:none;">
+          <div class="session-header">
+            <div>
+              <div style="font-family:var(--font-mono); font-size:var(--text-xs); opacity:0.7; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">Now Active</div>
+              <div class="session-title" id="activeSubjectName">Data Structures</div>
+            </div>
+            <div class="live-badge">
+              <div class="live-dot"></div> LIVE
+            </div>
+          </div>
+
+          <div class="session-body">
+            <!-- Attendance Code Display -->
+            <div style="text-align:center; padding: var(--sp-8) 0;">
+              <div style="font-family:var(--font-mono); font-size:var(--text-xs); color:var(--ink-60); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:var(--sp-4);">Attendance Code</div>
+              <div id="sessionTokenDisplay" style="font-family:var(--font-display); font-size:3.5rem; font-weight:800; color:var(--blue); letter-spacing:0.08em; line-height:1; background:var(--blue-light); border-radius:var(--r-xl); padding:var(--sp-6) var(--sp-8); display:inline-block; border:2px solid var(--blue); box-shadow:var(--shadow-blue);">ATT-????</div>
+              <div style="margin-top:var(--sp-4); font-size:var(--text-sm); color:var(--ink-60);">Students enter this code on their dashboard</div>
+            </div>
+
+            <!-- Timer -->
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--sp-6); padding: var(--sp-4) var(--sp-6); background: var(--surface); border-radius: var(--r-xl);">
+              <div>
+                <div style="font-size:var(--text-xs); font-family:var(--font-mono); color:var(--ink-60); text-transform:uppercase; letter-spacing:0.08em;">Expires In</div>
+                <div style="font-family:var(--font-mono); font-size:var(--text-xl); font-weight:700; color:var(--blue);" id="timerDisplay">14:59</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:var(--text-xs); font-family:var(--font-mono); color:var(--ink-60); text-transform:uppercase; letter-spacing:0.08em;">Started At</div>
+                <div style="font-family:var(--font-mono); font-size:var(--text-sm); font-weight:500;" id="startTimeDisplay">—</div>
+              </div>
+            </div>
+
+            <!-- Present Count -->
+            <div class="present-count" style="margin-bottom: var(--sp-6);">
+              <div>
+                <div class="count-big" id="presentCount">0</div>
+                <div style="font-size:var(--text-xs); font-family:var(--font-mono); color:var(--blue); text-transform:uppercase; letter-spacing:0.08em;">Students Present</div>
+              </div>
+              <div style="flex:1; text-align:right;">
+                <div style="font-size:var(--text-xl); font-weight:700; color:var(--ink-60);">/ 58</div>
+                <div style="font-size:var(--text-xs); color:var(--ink-60); font-family:var(--font-mono);">Total Enrolled</div>
+              </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="session-controls">
+              <button class="btn btn-ghost" style="flex:1; justify-content:center;" onclick="copyCode()">
+                📋 Copy Code
+              </button>
+              <button class="btn btn-danger btn-lg" style="flex:1; justify-content:center;" onclick="endSession()">
+                ⏹ End Session
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Panel -->
+      <div style="display: flex; flex-direction: column; gap: var(--sp-5);">
+
+        <!-- Donut Chart: Today's Attendance -->
+        <div class="card card-pad">
+          <div class="section-header">
+            <div class="section-title">Today's Overview</div>
+            <div class="badge badge-blue">Live</div>
+          </div>
+          <div class="donut-wrap">
+            <canvas id="donutChart" width="150" height="150" style="flex-shrink:0;"></canvas>
+            <div>
+              <div style="margin-bottom:var(--sp-3);">
+                <div style="display:flex; align-items:center; gap:var(--sp-2); margin-bottom:4px;">
+                  <div style="width:10px;height:10px;border-radius:50%;background:var(--teal);"></div>
+                  <span style="font-size:var(--text-sm); font-weight:600;">Present</span>
+                  <span style="font-family:var(--font-mono); font-size:var(--text-xs); color:var(--teal); margin-left:auto;">47</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:var(--sp-2); margin-bottom:4px;">
+                  <div style="width:10px;height:10px;border-radius:50%;background:var(--rose);"></div>
+                  <span style="font-size:var(--text-sm); font-weight:600;">Absent</span>
+                  <span style="font-family:var(--font-mono); font-size:var(--text-xs); color:var(--rose); margin-left:auto;">11</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:var(--sp-2);">
+                  <div style="width:10px;height:10px;border-radius:50%;background:var(--amber);"></div>
+                  <span style="font-size:var(--text-sm); font-weight:600;">Late</span>
+                  <span style="font-family:var(--font-mono); font-size:var(--text-xs); color:var(--amber); margin-left:auto;">3</span>
+                </div>
+              </div>
+              <div style="padding: var(--sp-3); background: var(--blue-light); border-radius: var(--r-md);">
+                <div style="font-family:var(--font-display); font-size:var(--text-xl); font-weight:800; color:var(--blue);">81%</div>
+                <div style="font-size:var(--text-xs); color:var(--blue); font-family:var(--font-mono);">Class Average</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Trend -->
+        <div class="card card-pad">
+          <div class="section-header">
+            <div class="section-title">Weekly Trend</div>
+          </div>
+          <canvas id="weeklyChart" height="130"></canvas>
+        </div>
+
+        <!-- At-Risk Students -->
+        <div class="card card-pad">
+          <div class="section-header">
+            <div class="section-title">⚠️ At-Risk Students</div>
+            <span class="badge badge-danger">7 Students</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: var(--sp-2);">
+            <div style="display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-2) 0; border-bottom:1px solid var(--ink-10);">
+              <div class="avatar" style="width:32px;height:32px;font-size:var(--text-xs);">A</div>
+              <div style="flex:1;"><div style="font-size:var(--text-sm);font-weight:600;">Amir Siddiqui</div><div style="font-size:var(--text-xs);color:var(--ink-60);font-family:var(--font-mono);">62%</div></div>
+              <span class="badge badge-danger">Critical</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-2) 0; border-bottom:1px solid var(--ink-10);">
+              <div class="avatar" style="width:32px;height:32px;font-size:var(--text-xs); background: var(--grad-warm);">R</div>
+              <div style="flex:1;"><div style="font-size:var(--text-sm);font-weight:600;">Riya Patel</div><div style="font-size:var(--text-xs);color:var(--ink-60);font-family:var(--font-mono);">68%</div></div>
+              <span class="badge badge-warn">Warning</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-2) 0;">
+              <div class="avatar" style="width:32px;height:32px;font-size:var(--text-xs); background: var(--grad-teal);">N</div>
+              <div style="flex:1;"><div style="font-size:var(--text-sm);font-weight:600;">Neel Joshi</div><div style="font-size:var(--text-xs);color:var(--ink-60);font-family:var(--font-mono);">71%</div></div>
+              <span class="badge badge-warn">Warning</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Session History -->
+    <div class="card card-pad anim-fade-up delay-5">
+      <div class="section-header">
+        <div class="section-title">Session History</div>
+        <button class="btn btn-ghost" style="padding:8px 16px; font-size:var(--text-xs);">📥 Export CSV</button>
+      </div>
+      <div>
+        <div class="history-session">
+          <div class="session-icon" style="background:var(--teal-light);">✅</div>
+          <div style="flex:1;">
+            <div style="font-size:var(--text-sm); font-weight:600;">Data Structures — Lecture 34</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60); font-family:var(--font-mono);">Today • 09:00–09:55 AM</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:var(--font-display); font-weight:700; color:var(--teal);">47/58</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60);">81% present</div>
+          </div>
+        </div>
+        <div class="history-session">
+          <div class="session-icon" style="background:var(--blue-light);">📘</div>
+          <div style="flex:1;">
+            <div style="font-size:var(--text-sm); font-weight:600;">Data Structures — Lecture 33</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60); font-family:var(--font-mono);">Yesterday • 09:00–09:55 AM</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:var(--font-display); font-weight:700; color:var(--blue);">51/58</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60);">87% present</div>
+          </div>
+        </div>
+        <div class="history-session">
+          <div class="session-icon" style="background:var(--rose-light);">📕</div>
+          <div style="flex:1;">
+            <div style="font-size:var(--text-sm); font-weight:600;">Data Structures — Lecture 32</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60); font-family:var(--font-mono);">23 Jan • 09:00–09:55 AM</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:var(--font-display); font-weight:700; color:var(--rose);">38/58</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60);">65% present</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // ── Date ──
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'short', day: 'numeric', month: 'short'
+  });
+
+  // ── Donut Chart ──
+  const donutCtx = document.getElementById('donutChart').getContext('2d');
+  new Chart(donutCtx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [47, 11, 3],
+        backgroundColor: ['#00C9A7', '#F04E6E', '#F5A623'],
+        borderWidth: 0,
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      cutout: '72%',
+      responsive: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } }
+    }
+  });
+
+  // ── Weekly Chart ──
+  const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+  new Chart(weeklyCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      datasets: [{
+        label: 'Present',
+        data: [51, 48, 55, 44, 47],
+        backgroundColor: '#3B5BF6',
+        borderRadius: 8,
+        borderSkipped: false,
+      }, {
+        label: 'Absent',
+        data: [7, 10, 3, 14, 11],
+        backgroundColor: 'rgba(10,14,26,0.06)',
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'JetBrains Mono', size: 11 }, color: '#888' } },
+        y: { stacked: true, grid: { color: 'rgba(10,14,26,0.05)' }, ticks: { font: { family: 'JetBrains Mono', size: 11 }, color: '#888' } }
+      }
+    }
+  });
+
+  // ── Session Logic (API-connected) ──
+  const API = 'http://localhost:5000/api';
+  const getToken = () => localStorage.getItem('sa_token');
+
+  // Auth guard
+  if (!getToken()) window.location.href = 'login.html';
+  const me = JSON.parse(localStorage.getItem('sa_user') || '{}');
+  if (me.role !== 'teacher') window.location.href = 'login.html';
+
+  // Update sidebar with real user info
+  document.getElementById('sidebarName').textContent = me.name || 'Teacher';
+  document.getElementById('sidebarAvatar').textContent = (me.name || 'T')[0].toUpperCase();
+
+  // Dynamic greeting
+  const _h = new Date().getHours();
+  const _greet = _h < 12 ? 'Good Morning' : _h < 17 ? 'Good Afternoon' : 'Good Evening';
+  document.getElementById('greetingText').textContent = `${_greet}, ${me.name || 'Teacher'} 👋`;
+
+  async function apiFetch(path, opts = {}) {
+    const res = await fetch(API + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken(), ...(opts.headers || {}) }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  let sessionActive = false;
+  let timerInterval = null;
+  let pollInterval = null;
+  let activeSessionId = null;
+
+  function showToast(msg, type = 'info') {
+    const colors = { info: '#3B5BF6', success: '#00C9A7', error: '#F04E6E' };
+    const t = document.createElement('div');
+    t.textContent = msg;
+    Object.assign(t.style, {
+      position:'fixed', bottom:'24px', right:'24px', zIndex:'9999',
+      background: colors[type] || colors.info, color:'#fff',
+      padding:'12px 20px', borderRadius:'12px', fontFamily:'DM Sans,sans-serif',
+      fontSize:'14px', fontWeight:'500', boxShadow:'0 8px 32px rgba(0,0,0,0.2)'
+    });
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  async function startSession() {
+    const subject = document.getElementById('sessionSubject').value.trim();
+    if (!subject) { showToast('Please enter a subject name.', 'error'); return; }
+
+    try {
+      const data = await apiFetch('/sessions/start', {
+        method: 'POST',
+        body: JSON.stringify({ subject })
+      });
+
+      sessionActive = true;
+      activeSessionId = data.session.id;
+      const code = data.code;
+
+      document.getElementById('idleCard').style.display = 'none';
+      document.getElementById('activeCard').style.display = 'block';
+      document.getElementById('activeSubjectName').textContent = subject;
+      document.getElementById('startTimeDisplay').textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('sessionTokenDisplay').textContent = code;
+      document.getElementById('presentCount').textContent = '0';
+      document.getElementById('timerDisplay').textContent = '—';
+
+      // Poll for live count every 5s
+      pollInterval = setInterval(pollPresent, 5000);
+      showToast('Session started! Share the code with students.', 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function pollPresent() {
+    if (!activeSessionId) return;
+    try {
+      const data = await apiFetch('/attendance/session/' + activeSessionId);
+      document.getElementById('presentCount').textContent = data.count;
+    } catch (_) {}
+  }
+
+  async function endSession() {
+    try {
+      const data = await apiFetch('/sessions/end', { method: 'POST' });
+      sessionActive = false;
+      activeSessionId = null;
+      clearInterval(timerInterval);
+      clearInterval(pollInterval);
+      document.getElementById('idleCard').style.display = 'block';
+      document.getElementById('activeCard').style.display = 'none';
+      showToast(`Session ended. ${data.total_present} students marked present.`, 'success');
+      loadHistory();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  function copyCode() {
+    const code = document.getElementById('sessionTokenDisplay').textContent;
+    navigator.clipboard.writeText(code).then(() => showToast('Code copied!', 'success'));
+  }
+
+  async function loadHistory() {
+    try {
+      const data = await apiFetch('/analytics/teacher');
+      const tbody = document.querySelector('.history-session')?.parentElement;
+      if (!tbody || !data.history?.length) return;
+      tbody.innerHTML = data.history.map(s => `
+        <div class="history-session">
+          <div class="session-icon" style="background:${s.status==='CLOSED'?'var(--teal-light)':'var(--blue-light)'};">
+            ${s.status==='CLOSED'?'✅':'🔴'}
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:var(--text-sm); font-weight:600;">${s.subject}</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60); font-family:var(--font-mono);">
+              ${new Date(s.created_at * 1000).toLocaleDateString('en-IN', {day:'numeric',month:'short'})} •
+              Code: ${s.code}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:var(--font-display); font-weight:700; color:var(--teal);">${s.present_count}</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60);">present</div>
+          </div>
+        </div>
+      `).join('');
+    } catch (_) {}
+  }
+
+  function doLogout() {
+    localStorage.removeItem('sa_token');
+    localStorage.removeItem('sa_user');
+    window.location.href = 'login.html';
+  }
+
+  // Check for existing active session on load
+  (async () => {
+    try {
+      const data = await apiFetch('/sessions/active');
+      if (data.session) {
+        sessionActive = true;
+        activeSessionId = data.session.id;
+        document.getElementById('idleCard').style.display = 'none';
+        document.getElementById('activeCard').style.display = 'block';
+        document.getElementById('activeSubjectName').textContent = data.session.subject;
+        document.getElementById('sessionTokenDisplay').textContent = data.session.code;
+        document.getElementById('presentCount').textContent = data.session.present_count || '0';
+        document.getElementById('startTimeDisplay').textContent = new Date(data.session.created_at * 1000).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'});
+        pollInterval = setInterval(pollPresent, 5000);
+      }
+    } catch (_) {}
+    loadHistory();
+  })();
+</script>
+</body>
+</html>

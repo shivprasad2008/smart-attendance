@@ -1,0 +1,3 @@
+/* Chart container styles */
+canvas { display: block; }
+.chart-container { position: relative; width: 100%; }

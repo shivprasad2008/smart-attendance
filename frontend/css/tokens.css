@@ -1,0 +1,96 @@
+/* ============================================
+   SMART ATTENDANCE SYSTEM — DESIGN TOKENS
+   Designer: World-Class UI/UX System
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ── PALETTE ── */
+  --ink:          #0A0E1A;
+  --ink-60:       rgba(10, 14, 26, 0.60);
+  --ink-30:       rgba(10, 14, 26, 0.30);
+  --ink-10:       rgba(10, 14, 26, 0.08);
+
+  --surface:      #F4F6FC;
+  --surface-2:    #ECEFFE;
+  --card:         #FFFFFF;
+
+  --blue:         #3B5BF6;
+  --blue-light:   #EEF1FE;
+  --blue-glow:    rgba(59, 91, 246, 0.18);
+
+  --teal:         #00C9A7;
+  --teal-light:   #E6FAF6;
+
+  --amber:        #F5A623;
+  --amber-light:  #FEF6E7;
+
+  --rose:         #F04E6E;
+  --rose-light:   #FEECF0;
+
+  --violet:       #7C3AED;
+  --violet-light: #F2EDFE;
+
+  /* ── GRADIENTS ── */
+  --grad-hero:    linear-gradient(135deg, #3B5BF6 0%, #7C3AED 100%);
+  --grad-teal:    linear-gradient(135deg, #00C9A7 0%, #3B5BF6 100%);
+  --grad-warm:    linear-gradient(135deg, #F5A623 0%, #F04E6E 100%);
+  --grad-card:    linear-gradient(145deg, #FFFFFF 0%, #F4F6FC 100%);
+
+  /* ── TYPOGRAPHY ── */
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  --text-xs:    0.72rem;
+  --text-sm:    0.85rem;
+  --text-base:  1rem;
+  --text-md:    1.125rem;
+  --text-lg:    1.35rem;
+  --text-xl:    1.75rem;
+  --text-2xl:   2.25rem;
+  --text-3xl:   3rem;
+  --text-hero:  4.5rem;
+
+  /* ── SPACING ── */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+  --sp-20: 5rem;
+
+  /* ── RADIUS ── */
+  --r-sm:  8px;
+  --r-md:  14px;
+  --r-lg:  20px;
+  --r-xl:  28px;
+  --r-2xl: 40px;
+  --r-full: 999px;
+
+  /* ── SHADOWS ── */
+  --shadow-xs:  0 1px 3px rgba(10,14,26,0.06);
+  --shadow-sm:  0 2px 8px rgba(10,14,26,0.08);
+  --shadow-md:  0 4px 20px rgba(10,14,26,0.10);
+  --shadow-lg:  0 8px 40px rgba(10,14,26,0.12);
+  --shadow-xl:  0 20px 60px rgba(10,14,26,0.14);
+  --shadow-blue: 0 8px 32px rgba(59,91,246,0.28);
+  --shadow-teal: 0 8px 32px rgba(0,201,167,0.28);
+
+  /* ── TRANSITIONS ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:   cubic-bezier(0.4, 0, 0.2, 1);
+  --t-fast: 160ms;
+  --t-base: 280ms;
+  --t-slow: 480ms;
+
+  /* ── LAYOUT ── */
+  --sidebar-w: 260px;
+  --topbar-h:  72px;
+}

@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Dashboard — SmartAttend</title>
+  <link rel="stylesheet" href="../css/tokens.css" />
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/charts.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    /* ── PAGE-SPECIFIC ── */
+    .hero-section {
+      background: var(--grad-hero);
+      border-radius: var(--r-2xl);
+      padding: var(--sp-10);
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-8);
+      box-shadow: var(--shadow-blue);
+    }
+
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 300px; height: 300px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 50%;
+    }
+
+    .hero-section::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: 40%;
+      width: 240px; height: 240px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+    }
+
+    .hero-text .sub {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      opacity: 0.7;
+      margin-bottom: var(--sp-2);
+    }
+
+    .hero-text h2 {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: var(--sp-3);
+    }
+
+    .hero-text .caption {
+      opacity: 0.8;
+      font-size: var(--text-sm);
+      max-width: 320px;
+    }
+
+    .hero-ring-wrap {
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+    }
+
+    .hero-ring-bg {
+      fill: none;
+      stroke: rgba(255,255,255,0.15);
+      stroke-width: 10;
+    }
+
+    .hero-ring-fill {
+      fill: none;
+      stroke: #fff;
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 565;
+      stroke-dashoffset: 141; /* 75% = 565*0.25 */
+      transition: stroke-dashoffset 1.5s var(--ease-out-expo);
+    }
+
+    .hero-ring-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-ring-center .pct {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .hero-ring-center .pct-sub {
+      font-size: var(--text-xs);
+      opacity: 0.7;
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    /* Scan QR Overlay */
+    .scan-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,14,26,0.7);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      place-items: center;
+    }
+    .scan-overlay.open { display: grid; }
+
+    .scan-modal {
+      background: var(--card);
+      border-radius: var(--r-2xl);
+      padding: var(--sp-10);
+      max-width: 440px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+      animation: scaleIn 0.3s var(--ease-out-expo) both;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .scan-close {
+      position: absolute;
+      top: var(--sp-5); right: var(--sp-5);
+      width: 34px; height: 34px;
+      border-radius: var(--r-full);
+      background: var(--surface);
+      border: none;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      transition: background var(--t-fast);
+    }
+    .scan-close:hover { background: var(--rose-light); }
+
+    .camera-box {
+      width: 100%;
+      aspect-ratio: 1;
+      background: var(--surface);
+      border-radius: var(--r-xl);
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+      margin: var(--sp-6) 0;
+    }
+
+    .camera-corners::before, .camera-corners::after {
+      content: '';
+      position: absolute;
+      width: 28px; height: 28px;
+      border: 3px solid var(--blue);
+    }
+
+    .scan-line {
+      position: absolute;
+      left: 10%; right: 10%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--blue), transparent);
+      animation: scanAnim 2s linear infinite;
+    }
+
+    @keyframes scanAnim {
+      0%   { top: 15%; }
+      100% { top: 85%; }
+    }
+
+    .camera-corners-tl {
+      position: absolute;
+      top: 16px; left: 16px;
+      border-top: 3px solid var(--blue);
+      border-left: 3px solid var(--blue);
+      width: 28px; height: 28px;
+      border-radius: 4px 0 0 0;
+    }
+    .camera-corners-tr {
+      position: absolute;
+      top: 16px; right: 16px;
+      border-top: 3px solid var(--blue);
+      border-right: 3px solid var(--blue);
+      width: 28px; height: 28px;
+      border-radius: 0 4px 0 0;
+    }
+    .camera-corners-bl {
+      position: absolute;
+      bottom: 16px; left: 16px;
+      border-bottom: 3px solid var(--blue);
+      border-left: 3px solid var(--blue);
+      width: 28px; height: 28px;
+      border-radius: 0 0 0 4px;
+    }
+    .camera-corners-br {
+      position: absolute;
+      bottom: 16px; right: 16px;
+      border-bottom: 3px solid var(--blue);
+      border-right: 3px solid var(--blue);
+      width: 28px; height: 28px;
+      border-radius: 0 0 4px 0;
+    }
+
+    .camera-icon {
+      font-size: 3rem;
+      opacity: 0.3;
+    }
+
+    /* Timeline */
+    .timeline-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+      padding: var(--sp-3) 0;
+      border-bottom: 1px solid var(--ink-10);
+    }
+    .timeline-item:last-child { border-bottom: none; }
+
+    /* Warning Banner */
+    .warning-banner {
+      background: var(--amber-light);
+      border: 1px solid rgba(245,166,35,0.3);
+      border-radius: var(--r-xl);
+      padding: var(--sp-5) var(--sp-6);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+    }
+
+    .warning-icon {
+      width: 44px; height: 44px;
+      background: var(--amber);
+      border-radius: var(--r-md);
+      display: grid;
+      place-items: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <a href="student-dashboard.html" class="sidebar-logo">
+      <div class="logo-icon">⚡</div>
+      SmartAttend
+    </a>
+
+    <p class="sidebar-section-label">Student</p>
+    <nav class="sidebar-nav">
+      <a href="student-dashboard.html" class="nav-link active">
+        <span class="nav-icon">🏠</span> Dashboard
+      </a>
+      <a href="#" class="nav-link" onclick="openScanner(); return false;">
+        <span class="nav-icon">✏️</span> Mark Attendance
+      </a>
+      <a href="#" class="nav-link" onclick="document.querySelector('.subject-card')?.scrollIntoView({behavior:'smooth'}); return false;">
+        <span class="nav-icon">📚</span> Subjects
+      </a>
+      <a href="#" class="nav-link" onclick="document.querySelector('.timeline-item')?.scrollIntoView({behavior:'smooth'}); return false;">
+        <span class="nav-icon">📅</span> Activity
+      </a>
+    </nav>
+
+    <p class="sidebar-section-label">Account</p>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-link" onclick="doLogout(); return false;">
+        <span class="nav-icon">🚪</span> Logout
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="avatar" id="sidebarAvatar">S</div>
+        <div class="user-info">
+          <div class="name" id="sidebarName">Student</div>
+          <div class="role">Student</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="main-content">
+
+    <!-- Top Bar -->
+    <div class="topbar anim-fade-up">
+      <div class="topbar-left">
+        <div class="greeting" id="greetingText">Good Morning 👋</div>
+        <div class="sub">Here's your attendance overview for this semester</div>
+      </div>
+      <div class="topbar-right">
+        <div class="date-chip">📅 <span id="today-date"></span></div>
+        <div class="notif-btn">🔔 <span class="notif-dot"></span></div>
+      </div>
+    </div>
+
+    <!-- Warning Banner (if < 75%) -->
+    <div class="warning-banner anim-fade-up delay-1" style="margin-bottom: var(--sp-6);">
+      <div class="warning-icon">⚠️</div>
+      <div>
+        <div style="font-weight:700; color:var(--amber); font-size:var(--text-sm); font-family:var(--font-display);">Attendance Warning — Mathematics</div>
+        <div style="font-size:var(--text-xs); color:var(--ink-60); margin-top:2px;">Your Mathematics attendance is at 68%. Minimum required is 75%. Attend 3 more classes to avoid debarment.</div>
+      </div>
+      <button class="btn btn-ghost" style="margin-left:auto; white-space:nowrap; font-size:var(--text-xs); padding: 8px 14px;">View Details</button>
+    </div>
+
+    <!-- Hero Section -->
+    <div class="hero-section anim-fade-up delay-2" style="margin-bottom: var(--sp-6);">
+      <div class="hero-text">
+        <p class="sub">Semester Progress</p>
+        <h2>Your Overall<br/>Attendance</h2>
+        <p class="caption">You've attended 62 out of 78 total classes this semester. Keep it up!</p>
+        <div style="margin-top: var(--sp-6); display: flex; gap: var(--sp-3); flex-wrap: wrap;">
+          <button class="btn" style="background: rgba(255,255,255,0.2); color: #fff; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3);" onclick="openScanner()">
+            📝 Enter Attendance Code
+          </button>
+          <button class="btn" style="background: rgba(255,255,255,0.1); color: #fff; backdrop-filter: blur(8px);">
+            📄 Download Report
+          </button>
+        </div>
+      </div>
+
+      <div class="hero-ring-wrap">
+        <svg width="180" height="180" viewBox="0 0 180 180" style="transform: rotate(-90deg);">
+          <circle class="hero-ring-bg" cx="90" cy="90" r="78"/>
+          <circle class="hero-ring-fill" id="heroRing" cx="90" cy="90" r="78"/>
+        </svg>
+        <div class="hero-ring-center">
+          <div class="pct" id="heroPercent">79%</div>
+          <div class="pct-sub">ATTENDANCE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="grid-4 anim-fade-up delay-3" style="margin-bottom: var(--sp-6);">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--blue-light);">📅</div>
+        <div class="stat-body">
+          <div class="label">Total Classes</div>
+          <div class="value">78</div>
+          <div class="change">↑ This Semester</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--teal-light);">✅</div>
+        <div class="stat-body">
+          <div class="label">Attended</div>
+          <div class="value">62</div>
+          <div class="change" style="color: var(--teal);">✓ Present</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--rose-light);">❌</div>
+        <div class="stat-body">
+          <div class="label">Missed</div>
+          <div class="value">16</div>
+          <div class="change" style="color: var(--rose);">↑ 3 this week</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--violet-light);">🎯</div>
+        <div class="stat-body">
+          <div class="label">Target</div>
+          <div class="value">75%</div>
+          <div class="change" style="color: var(--violet);">Minimum</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts + Subjects Side by Side -->
+    <div class="grid-2 anim-fade-up delay-4" style="margin-bottom: var(--sp-6);">
+
+      <!-- Line Chart -->
+      <div class="card card-pad">
+        <div class="section-header">
+          <div class="section-title">Attendance Trend</div>
+          <div class="badge badge-safe">Monthly</div>
+        </div>
+        <canvas id="trendChart" height="200"></canvas>
+      </div>
+
+      <!-- Bar Chart -->
+      <div class="card card-pad">
+        <div class="section-header">
+          <div class="section-title">Subject-wise</div>
+          <div class="badge badge-blue">Semester</div>
+        </div>
+        <canvas id="subjectChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Subject List -->
+    <div class="anim-fade-up delay-5" style="margin-bottom: var(--sp-6);">
+      <div class="section-header">
+        <div class="section-title">All Subjects</div>
+        <button class="btn btn-ghost" style="padding: 8px 16px; font-size: var(--text-xs);">View All →</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: var(--sp-3);">
+
+        <div class="subject-card">
+          <div class="subject-dot" style="background: var(--blue);"></div>
+          <div class="subject-info">
+            <div class="subject-name">Data Structures & Algorithms</div>
+            <div class="subject-meta">Prof. Sharma • 22/26 classes</div>
+          </div>
+          <div class="subject-bar-wrap">
+            <div class="subject-bar-label">
+              <span>Attendance</span><span style="color: var(--teal);">84%</span>
+            </div>
+            <div class="subject-bar-bg">
+              <div class="subject-bar-fill" style="width: 84%; background: var(--teal);"></div>
+            </div>
+          </div>
+          <span class="badge badge-safe">Safe</span>
+        </div>
+
+        <div class="subject-card">
+          <div class="subject-dot" style="background: var(--rose);"></div>
+          <div class="subject-info">
+            <div class="subject-name">Mathematics III</div>
+            <div class="subject-meta">Prof. Verma • 14/20 classes</div>
+          </div>
+          <div class="subject-bar-wrap">
+            <div class="subject-bar-label">
+              <span>Attendance</span><span style="color: var(--rose);">68%</span>
+            </div>
+            <div class="subject-bar-bg">
+              <div class="subject-bar-fill" style="width: 68%; background: var(--rose);"></div>
+            </div>
+          </div>
+          <span class="badge badge-danger">Warning</span>
+        </div>
+
+        <div class="subject-card">
+          <div class="subject-dot" style="background: var(--violet);"></div>
+          <div class="subject-info">
+            <div class="subject-name">Operating Systems</div>
+            <div class="subject-meta">Prof. Mehta • 18/22 classes</div>
+          </div>
+          <div class="subject-bar-wrap">
+            <div class="subject-bar-label">
+              <span>Attendance</span><span style="color: var(--violet);">81%</span>
+            </div>
+            <div class="subject-bar-bg">
+              <div class="subject-bar-fill" style="width: 81%; background: var(--violet);"></div>
+            </div>
+          </div>
+          <span class="badge badge-safe">Safe</span>
+        </div>
+
+        <div class="subject-card">
+          <div class="subject-dot" style="background: var(--amber);"></div>
+          <div class="subject-info">
+            <div class="subject-name">Computer Networks</div>
+            <div class="subject-meta">Prof. Singh • 8/10 classes</div>
+          </div>
+          <div class="subject-bar-wrap">
+            <div class="subject-bar-label">
+              <span>Attendance</span><span style="color: var(--amber);">80%</span>
+            </div>
+            <div class="subject-bar-bg">
+              <div class="subject-bar-fill" style="width: 80%; background: var(--amber);"></div>
+            </div>
+          </div>
+          <span class="badge badge-safe">Safe</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card card-pad anim-fade-up delay-6">
+      <div class="section-header">
+        <div class="section-title">Recent Activity</div>
+      </div>
+      <div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background: var(--teal);"></div>
+          <div style="flex:1;">
+            <div style="font-size:var(--text-sm); font-weight:600;">Marked Present — Data Structures</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60); font-family:var(--font-mono); margin-top:2px;">Today 09:14 AM</div>
+          </div>
+          <span class="badge badge-safe">✓ Present</span>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background: var(--rose);"></div>
+          <div style="flex:1;">
+            <div style="font-size:var(--text-sm); font-weight:600;">Absent — Mathematics III</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60); font-family:var(--font-mono); margin-top:2px;">Yesterday 11:00 AM</div>
+          </div>
+          <span class="badge badge-danger">✗ Absent</span>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background: var(--teal);"></div>
+          <div style="flex:1;">
+            <div style="font-size:var(--text-sm); font-weight:600;">Marked Present — Operating Systems</div>
+            <div style="font-size:var(--text-xs); color:var(--ink-60); font-family:var(--font-mono); margin-top:2px;">Yesterday 09:00 AM</div>
+          </div>
+          <span class="badge badge-safe">✓ Present</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══ MARK ATTENDANCE OVERLAY ═══ -->
+<div class="scan-overlay" id="scanOverlay" onclick="if(event.target===this) closeScanner()">
+  <div class="scan-modal">
+    <button class="scan-close" onclick="closeScanner()">✕</button>
+    <div style="font-family:var(--font-display); font-size:var(--text-xl); font-weight:800; margin-bottom:var(--sp-2);">Mark Attendance</div>
+    <div style="font-size:var(--text-sm); color:var(--ink-60); margin-bottom:var(--sp-6);">Enter the attendance code your teacher shared</div>
+
+    <div style="margin-bottom: var(--sp-6);">
+      <input id="attendanceCodeInput" class="input" type="text" placeholder="e.g. ATT-A3F9"
+        style="text-align:center; font-family:var(--font-mono); font-size:var(--text-xl); font-weight:700; color:var(--blue); letter-spacing:0.1em; text-transform:uppercase;"
+        oninput="this.value=this.value.toUpperCase()"
+        onkeydown="if(event.key==='Enter') submitCode()" />
+    </div>
+
+    <div id="markResult" style="display:none; margin-bottom:var(--sp-4); padding:var(--sp-3) var(--sp-4); border-radius:var(--r-md); font-size:var(--text-sm); font-family:var(--font-mono);"></div>
+
+    <button class="btn btn-primary btn-lg" style="width:100%; justify-content:center; margin-bottom:var(--sp-3);" onclick="submitCode()">
+      ✅ Submit Code
+    </button>
+    <button class="btn btn-ghost" style="width:100%; justify-content:center; font-size:var(--text-sm);" onclick="closeScanner()">
+      Cancel
+    </button>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:5000/api';
+  const getToken = () => localStorage.getItem('sa_token');
+
+  // Auth guard
+  if (!getToken()) window.location.href = 'login.html';
+  const me = JSON.parse(localStorage.getItem('sa_user') || '{}');
+  if (me.role !== 'student') window.location.href = 'login.html';
+
+  // Update sidebar with real user info
+  document.getElementById('sidebarName').textContent = me.name || 'Student';
+  document.getElementById('sidebarAvatar').textContent = (me.name || 'S')[0].toUpperCase();
+
+  // Dynamic greeting
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+  document.getElementById('greetingText').textContent = `${greet}, ${me.name || 'Student'} 👋`;
+
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+  });
+
+  async function apiFetch(path, opts = {}) {
+    const res = await fetch(API + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken(), ...(opts.headers || {}) }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  // ── Load Analytics ──
+  async function loadDashboard() {
+    try {
+      const data = await apiFetch('/attendance/my');
+
+      const pct = data.overall_percentage || 0;
+      document.getElementById('heroPercent').textContent = pct + '%';
+
+      // Update hero ring
+      const ring = document.getElementById('heroRing');
+      const circumference = 2 * Math.PI * 78;
+      const offset = circumference * (1 - pct / 100);
+      setTimeout(() => {
+        ring.style.strokeDasharray = circumference;
+        ring.style.strokeDashoffset = offset;
+        ring.style.transition = 'stroke-dashoffset 1.5s cubic-bezier(0.16, 1, 0.3, 1)';
+      }, 300);
+
+      // Update stat cards
+      const statCards = document.querySelectorAll('.stat-card .value');
+      if (statCards[0]) statCards[0].textContent = data.total_sessions;
+      if (statCards[1]) statCards[1].textContent = data.total_attended;
+      if (statCards[2]) statCards[2].textContent = data.total_missed;
+
+      // Render subject list
+      renderSubjects(data.subject_stats || []);
+
+      // Update charts
+      updateCharts(data.subject_stats || []);
+
+      // Render recent activity
+      renderActivity(data.records || []);
+    } catch (e) {
+      console.warn('Dashboard load error:', e.message);
+    }
+  }
+
+  function renderSubjects(stats) {
+    const container = document.querySelector('.subject-card')?.parentElement;
+    if (!container || !stats.length) return;
+    container.innerHTML = stats.map(s => {
+      const color = s.percentage >= 85 ? 'var(--teal)' : s.percentage >= 75 ? 'var(--amber)' : 'var(--rose)';
+      const badge = s.warning ? '<span class="badge badge-danger">Warning</span>' : '<span class="badge badge-safe">Safe</span>';
+      return `
+        <div class="subject-card">
+          <div class="subject-dot" style="background:${color};"></div>
+          <div class="subject-info">
+            <div class="subject-name">${s.subject}</div>
+            <div class="subject-meta">${s.attended}/${s.total} classes</div>
+          </div>
+          <div class="subject-bar-wrap">
+            <div class="subject-bar-label">
+              <span>Attendance</span><span style="color:${color};">${s.percentage}%</span>
+            </div>
+            <div class="subject-bar-bg">
+              <div class="subject-bar-fill" style="width:${s.percentage}%; background:${color};"></div>
+            </div>
+          </div>
+          ${badge}
+        </div>`;
+    }).join('');
+  }
+
+  function renderActivity(records) {
+    const container = document.querySelector('.timeline-item')?.parentElement;
+    if (!container || !records.length) return;
+    container.innerHTML = records.slice(0, 5).map(r => `
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--teal);"></div>
+        <div style="flex:1;">
+          <div style="font-size:var(--text-sm); font-weight:600;">Marked Present — ${r.subject}</div>
+          <div style="font-size:var(--text-xs); color:var(--ink-60); font-family:var(--font-mono); margin-top:2px;">
+            ${new Date(r.timestamp * 1000).toLocaleDateString('en-IN', {day:'numeric',month:'short'})} • ${new Date(r.timestamp * 1000).toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'})}
+          </div>
+        </div>
+        <span class="badge badge-safe">✓ Present</span>
+      </div>`).join('');
+  }
+
+  function updateCharts(stats) {
+    const labels = stats.map(s => s.subject.length > 8 ? s.subject.slice(0, 8) + '…' : s.subject);
+    const values = stats.map(s => s.percentage);
+    const colors = ['#3B5BF6', '#F04E6E', '#7C3AED', '#F5A623', '#00C9A7'];
+
+    const chartOpts = {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 0, max: 100, grid: { color: 'rgba(10,14,26,0.05)' }, ticks: { font: { family: 'JetBrains Mono', size: 11 }, color: '#666' } },
+        x: { grid: { display: false }, ticks: { font: { family: 'JetBrains Mono', size: 11 }, color: '#666' } }
+      }
+    };
+
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: labels.length ? labels : ['No data'],
+        datasets: [{ data: values.length ? values : [0], fill: true, borderColor: '#3B5BF6', backgroundColor: 'rgba(59,91,246,0.08)', borderWidth: 2.5, pointBackgroundColor: '#3B5BF6', pointRadius: 4, tension: 0.45 }]
+      },
+      options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, min: 50 } } }
+    });
+
+    const subjCtx = document.getElementById('subjectChart').getContext('2d');
+    new Chart(subjCtx, {
+      type: 'bar',
+      data: {
+        labels: labels.length ? labels : ['No data'],
+        datasets: [{ data: values.length ? values : [0], backgroundColor: colors, borderRadius: 8, borderSkipped: false }]
+      },
+      options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, min: 50 } } }
+    });
+  }
+
+  // ── Attendance Code ──
+  function openScanner() {
+    document.getElementById('scanOverlay').classList.add('open');
+    document.getElementById('attendanceCodeInput').value = '';
+    document.getElementById('markResult').style.display = 'none';
+    setTimeout(() => document.getElementById('attendanceCodeInput').focus(), 100);
+  }
+
+  function closeScanner() {
+    document.getElementById('scanOverlay').classList.remove('open');
+  }
+
+  async function submitCode() {
+    const code = document.getElementById('attendanceCodeInput').value.trim().toUpperCase();
+    const resultEl = document.getElementById('markResult');
+    if (!code) return;
+
+    try {
+      const data = await apiFetch('/attendance/mark', {
+        method: 'POST',
+        body: JSON.stringify({ code })
+      });
+      resultEl.textContent = '✅ ' + data.message;
+      resultEl.style.background = 'var(--teal-light)';
+      resultEl.style.color = 'var(--teal)';
+      resultEl.style.display = 'block';
+      setTimeout(() => { closeScanner(); loadDashboard(); }, 1800);
+    } catch (e) {
+      resultEl.textContent = '⚠️ ' + e.message;
+      resultEl.style.background = 'var(--rose-light)';
+      resultEl.style.color = 'var(--rose)';
+      resultEl.style.display = 'block';
+    }
+  }
+
+  function doLogout() {
+    localStorage.removeItem('sa_token');
+    localStorage.removeItem('sa_user');
+    window.location.href = 'login.html';
+  }
+
+  // Init
+  loadDashboard();
+</script>
+</body>
+</html>
